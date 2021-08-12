@@ -27,6 +27,9 @@ public class OrderService {
     @Autowired
     private KafkaSender sender;
 
+    @Autowired
+    private CustomLoggerService loggerService;
+
     public void createOrderFromEvent(CreateOrderEvent event) {
         Order order = domainService.createOrderFromEvent(event);
         repository.save(order);
@@ -39,6 +42,8 @@ public class OrderService {
         dto.setId(order.getId());
         dto.setStatus(order.getStatus());
         dto.setTimeStamp(order.getTimeStamp());
+
+        loggerService.log("Order Created : " + order.getId());
 
         return dto;
     }
@@ -58,10 +63,12 @@ public class OrderService {
         if (order != null) {
             order.setStatus("PLACED");
             repository.save(order);
+            loggerService.log("Order placed ID : " + order.getId());
 
             // send kafka message
             OrderPlacedEvent event = domainService.getOrderPlacedEventFromOrder(order);
             sender.sendOrderPlaced("order-placed", event);
+            loggerService.log("Order Place Event Sent : " + order.getId());
         }
     }
 }
